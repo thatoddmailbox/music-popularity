@@ -10,8 +10,8 @@ class ChordBlock:
 		self.block = None
 		self.function = None
 		self.instrument = None
-		self.chords = []
 
+		bars = []
 		for i, part in enumerate(parts):
 			stripped_part = part.strip()
 			if len(stripped_part) == 0:
@@ -32,7 +32,19 @@ class ChordBlock:
 				self.instrument = part
 				continue
 
-			self.chords.append(stripped_part)
+			# ok, then we're looking at an actual vvar
+			bar = []
+			bar_chords = stripped_part.split(" ")
+			for chord in bar_chords:
+				if chord == ".":
+					# it's repeated
+					bar.append(bar[-1])
+					continue
+				bar.append(chord)
+
+			bars.append(tuple(bar))
+
+		self.bars = tuple(bars)
 
 	def __str__(self) -> str:
 		metadata = []
@@ -42,10 +54,10 @@ class ChordBlock:
 			metadata.append(self.function)
 
 		result = ", ".join(metadata)
-		if len(self.chords) > 0:
+		if len(self.bars) > 0:
 			if len(result) > 0:
 				result += " "
-			result += str(self.chords)
+			result += str(self.bars)
 		return result
 
 	def __repr__(self) -> str:
@@ -82,8 +94,7 @@ class Chords:
 				parts = stripped_line.split("\t")
 
 				time = float(parts[0])
-				chord_block_parts = parts[1].split("|")
-				chord_block = ChordBlock(chord_block_parts)
+				chord_block = ChordBlock(parts[1].split("|"))
 
 				self.blocks.append((time, chord_block))
 
