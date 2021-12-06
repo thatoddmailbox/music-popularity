@@ -1,3 +1,92 @@
+import os
+
+from . import song
+
+class ChordBlock:
+	def __init__(self, parts: "list[str]"):
+		# https://ismir2011.ismir.net/papers/PS4-14.pdf
+		# see salami paper, section 3.2, figure 1
+
+		self.block = None
+		self.function = None
+		self.instrument = None
+		self.chords = []
+
+		for i, part in enumerate(parts):
+			stripped_part = part.strip()
+			if len(stripped_part) == 0:
+				continue
+
+			if i == 0:
+				# similarity info
+				info = stripped_part.split(",")
+				if len(info) == 3:
+					self.block = info[0].strip()
+					self.function = info[1].strip()
+				elif (len(info) == 2 or len(info) == 1) and len(info[0]) > 0:
+					self.function = info[0].strip()
+				continue
+
+			if i == len(parts) - 1:
+				# last part, will have instrument info
+				self.instrument = part
+				continue
+
+			self.chords.append(stripped_part)
+
+	def __str__(self) -> str:
+		metadata = []
+		if self.block:
+			metadata.append(self.block)
+		if self.function:
+			metadata.append(self.function)
+
+		result = ", ".join(metadata)
+		if len(self.chords) > 0:
+			if len(result) > 0:
+				result += " "
+			result += str(self.chords)
+		return result
+
+	def __repr__(self) -> str:
+		return "<ChordBlock " + str(self) + ">"
+
 class Chords:
-	def __init__():
-		pass
+	def __init__(self, s: song.Song):
+		self.chord_file_path = os.path.join(s.data_dir(), "salami_chords.txt")
+
+		self.meter = ""
+		self.tonic = ""
+		self.progression = []
+		self.blocks = []
+
+		with open(self.chord_file_path) as chord_file:
+			for line in chord_file.readlines():
+				if line[0] == "#":
+					# it's a comment
+					parts = line.split(":")
+					key = parts[0].strip()
+					value = parts[1].strip()
+					if key == "# metre":
+						self.meter = value
+					elif key == "# tonic":
+						self.tonic = value
+
+					continue
+
+				stripped_line = line.strip()
+				if stripped_line == "":
+					# blank line
+					continue
+
+				parts = stripped_line.split("\t")
+
+				time = float(parts[0])
+				chord_block_parts = parts[1].split("|")
+				chord_block = ChordBlock(chord_block_parts)
+
+				self.blocks.append((time, chord_block))
+
+		# print(self.meter, self.tonic)
+		# print(self.progression)
+		# print(self.blocks)
