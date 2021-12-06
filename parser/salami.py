@@ -1,6 +1,9 @@
 import os
 
-from . import song
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+	from . import song
 
 class ChordBlock:
 	def __init__(self, parts: "list[str]"):
@@ -64,7 +67,7 @@ class ChordBlock:
 		return "<ChordBlock " + str(self) + ">"
 
 class Chords:
-	def __init__(self, s: song.Song):
+	def __init__(self, s: "song.Song"):
 		self.chord_file_path = os.path.join(s.data_dir(), "salami_chords.txt")
 
 		self.meter = ""

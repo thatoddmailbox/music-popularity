@@ -1,9 +1,12 @@
 import os
 
-from . import dataset, salami
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+	from . import dataset
+from . import salami
 
 class Song:
-	def __init__(self, ds: dataset.Dataset, csv_row: "list[str]"):
+	def __init__(self, ds: "dataset.Dataset", csv_row: "list[str]"):
 		self.id = csv_row[0]
 		self.id_pad = csv_row[0].zfill(4)
 		self.chart_date = csv_row[1]
