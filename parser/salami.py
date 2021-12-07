@@ -1,7 +1,7 @@
 import os
 
 from collections import Counter
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, Generator
 
 if TYPE_CHECKING:
 	from . import song
@@ -36,10 +36,20 @@ class ChordBlock:
 				self.instrument = part
 				continue
 
-			# ok, then we're looking at an actual vvar
+			# ok, then we're looking at an actual bar
 			bar = []
 			bar_chords = stripped_part.split(" ")
 			for chord in bar_chords:
+				if chord[0] == "(" and chord[-1] == ")":
+					# this is a time signature indicator
+					# ignore it
+					continue
+
+				if chord == "*":
+					# "For passages that were too musically elaborate to merit beat-level chord
+					#  annotations, annotators sometimes filled the bar with an asterisk"
+					continue
+
 				if chord == ".":
 					# it's repeated
 					bar.append(bar[-1])
@@ -112,4 +122,36 @@ class Chords:
 			for bar in block.bars:
 				for chord in bar:
 					result[chord] += 1
+		return result
+
+	def linear(self) -> Generator[str, None, None]:
+		last_chord = None
+		for t, block in self.blocks:
+			for bar in block.bars:
+				for chord in bar:
+					if chord != last_chord and chord != "N" and chord != "&pause":
+						yield chord
+						last_chord = chord
+
+	def transition_counts(self) -> Dict[str, Dict[str, int]]:
+		result = {}
+		last_chord = None
+		for chord in self.linear():
+			if last_chord is not None:
+				if last_chord not in result:
+					result[last_chord] = {}
+				if chord not in result[last_chord]:
+					result[last_chord][chord] = 0
+				result[last_chord][chord] += 1
+			last_chord = chord
+		return result
+
+	def transition_probabilities(self) -> Dict[str, Dict[str, float]]:
+		result = self.transition_counts()
+		for from_chord in result:
+			total_count = 0
+			for to_chord in result[from_chord]:
+				total_count += result[from_chord][to_chord]
+			for to_chord in result[from_chord]:
+				result[from_chord][to_chord] /= float(total_count)
 		return result

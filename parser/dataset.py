@@ -10,7 +10,7 @@ class Dataset:
 
 		self.songs_with_data = set(os.listdir(self.data_path))
 
-		self.song_index = []
+		self.song_index: "list[song.Song]" = []
 		self.songs_by_id_pad = {}
 		self.existing = set()
 		with open(self.index_file_path, newline="") as index_file:
