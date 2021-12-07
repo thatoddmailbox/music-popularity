@@ -3,8 +3,11 @@ import os
 from collections import Counter
 from typing import TYPE_CHECKING, Dict, Generator
 
+from music21 import key, roman
+
 if TYPE_CHECKING:
 	from . import song
+from . import util
 
 class ChordBlock:
 	def __init__(self, parts: "list[str]"):
@@ -133,10 +136,22 @@ class Chords:
 						yield chord
 						last_chord = chord
 
-	def transition_counts(self) -> Dict[str, Dict[str, int]]:
+	def linear_roman(self) -> Generator[roman.RomanNumeral, None, None]:
+		if self.tonic is None:
+			raise ValueError("song does not have a tonic")
+
+		k = key.Key(self.tonic)
+		for chord_str in self.linear():
+			m21_chord = util.parse_chord_string(chord_str)
+			yield roman.romanNumeralFromChord(m21_chord, k)
+
+	def transition_counts(self, roman=False) -> Dict[str, Dict[str, int]]:
 		result = {}
 		last_chord = None
-		for chord in self.linear():
+		stream = self.linear_roman() if roman else self.linear()
+		for chord in stream:
+			if roman:
+				chord = chord.romanNumeral
 			if last_chord is not None:
 				if last_chord not in result:
 					result[last_chord] = {}
@@ -146,8 +161,8 @@ class Chords:
 			last_chord = chord
 		return result
 
-	def transition_probabilities(self) -> Dict[str, Dict[str, float]]:
-		result = self.transition_counts()
+	def transition_probabilities(self, roman=False) -> Dict[str, Dict[str, float]]:
+		result = self.transition_counts(roman=roman)
 		for from_chord in result:
 			total_count = 0
 			for to_chord in result[from_chord]:
