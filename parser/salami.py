@@ -1,7 +1,7 @@
 import os
 
 from collections import Counter
-from typing import TYPE_CHECKING, Dict, Generator
+from typing import TYPE_CHECKING, Dict, Generator, List
 
 from music21 import key, roman
 
@@ -88,6 +88,8 @@ class Chords:
 		self.tonic = ""
 		self.progression = []
 		self.blocks: list[tuple[float, ChordBlock]] = []
+		self._roman_list = None
+		self._roman_transition_vector = None
 
 		with open(self.chord_file_path) as chord_file:
 			for line in chord_file.readlines():
@@ -136,21 +138,27 @@ class Chords:
 						yield chord
 						last_chord = chord
 
-	def linear_roman(self) -> Generator[roman.RomanNumeral, None, None]:
+	def linear_roman(self, scaleDegrees=False) -> List[roman.RomanNumeral]:
 		if self.tonic is None:
 			raise ValueError("song does not have a tonic")
 
-		k = key.Key(self.tonic)
-		for chord_str in self.linear():
-			m21_chord = util.parse_chord_string(chord_str)
-			yield roman.romanNumeralFromChord(m21_chord, k)
+		if self._roman_list is None:
+			self._roman_list = []
+			k = key.Key(self.tonic)
+			for chord_str in self.linear():
+				m21_chord = util.parse_chord_string(chord_str)
+				self._roman_list.append(roman.romanNumeralFromChord(m21_chord, k))
 
-	def transition_counts(self, roman=False) -> Dict[str, Dict[str, int]]:
+		if scaleDegrees:
+			return list(map(lambda r: r.scaleDegree, self._roman_list))
+		return self._roman_list
+
+	def transition_counts(self, roman=False, scaleDegrees=False) -> Dict[str, Dict[str, int]]:
 		result = {}
 		last_chord = None
-		stream = self.linear_roman() if roman else self.linear()
+		stream = self.linear_roman(scaleDegrees=scaleDegrees) if roman else self.linear()
 		for chord in stream:
-			if roman:
+			if roman and not scaleDegrees:
 				chord = chord.romanNumeral
 			if last_chord is not None:
 				if last_chord not in result:
@@ -161,8 +169,8 @@ class Chords:
 			last_chord = chord
 		return result
 
-	def transition_probabilities(self, roman=False) -> Dict[str, Dict[str, float]]:
-		result = self.transition_counts(roman=roman)
+	def transition_probabilities(self, roman=False, scaleDegrees=False) -> Dict[str, Dict[str, float]]:
+		result = self.transition_counts(roman=roman, scaleDegrees=scaleDegrees)
 		for from_chord in result:
 			total_count = 0
 			for to_chord in result[from_chord]:
@@ -170,3 +178,18 @@ class Chords:
 			for to_chord in result[from_chord]:
 				result[from_chord][to_chord] /= float(total_count)
 		return result
+
+	def roman_transition_vector(self) -> List[float]:
+		if self._roman_transition_vector:
+			return self._roman_transition_vector
+		probs = self.transition_probabilities(roman=True, scaleDegrees=True)
+		# TODO: should probably expand this, it's a bit simplistic
+		result = []
+		for sd1 in range(1, 7 + 1):
+			sd1_transitions = probs[sd1] if sd1 in probs else {}
+			for sd2 in range(1, 7 + 1):
+				if sd1 == sd2:
+					continue
+				result.append(sd1_transitions[sd2] if sd2 in sd1_transitions else 0)
+		self._roman_transition_vector = result
+		return self._roman_transition_vector
