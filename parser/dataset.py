@@ -10,7 +10,7 @@ class Dataset:
 
 		self.songs_with_data = set(os.listdir(self.data_path))
 
-		self.song_index: "list[song.Song]" = []
+		self.songs: "list[song.Song]" = []
 		self.songs_by_id_pad = {}
 		self.existing = set()
 		with open(self.index_file_path, newline="") as index_file:
@@ -31,6 +31,6 @@ class Dataset:
 					# (we only care about the peak and the weeks, so OK to throw awat)
 					continue
 
-				self.song_index.append(s)
+				self.songs.append(s)
 				self.songs_by_id_pad[s.id_pad] = s
 				self.existing.add((s.title, s.artist))
