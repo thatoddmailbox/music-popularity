@@ -1,5 +1,6 @@
 import os
 
+from collections import Counter
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -47,7 +48,7 @@ class ChordBlock:
 
 			bars.append(tuple(bar))
 
-		self.bars = tuple(bars)
+		self.bars: "tuple[tuple[str]]" = tuple(bars)
 
 	def __str__(self) -> str:
 		metadata = []
@@ -73,7 +74,7 @@ class Chords:
 		self.meter = ""
 		self.tonic = ""
 		self.progression = []
-		self.blocks = []
+		self.blocks: list[tuple[float, ChordBlock]] = []
 
 		with open(self.chord_file_path) as chord_file:
 			for line in chord_file.readlines():
@@ -104,3 +105,11 @@ class Chords:
 		# print(self.meter, self.tonic)
 		# print(self.progression)
 		# print(self.blocks)
+
+	def chord_occurrences(self) -> Counter:
+		result = Counter()
+		for t, block in self.blocks:
+			for bar in block.bars:
+				for chord in bar:
+					result[chord] += 1
+		return result
