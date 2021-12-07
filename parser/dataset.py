@@ -34,3 +34,8 @@ class Dataset:
 				self.songs.append(s)
 				self.songs_by_id_pad[s.id_pad] = s
 				self.existing.add((s.title, s.artist))
+
+	def songs_with_spotify(self):
+		for s in self.songs:
+			if s.spotify_info() is not None:
+				yield s
