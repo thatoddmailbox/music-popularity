@@ -1,7 +1,8 @@
 import csv
+import json
 import os
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Union
 if TYPE_CHECKING:
 	from . import dataset
 from . import salami
@@ -21,6 +22,7 @@ class Song:
 		self._ds = ds
 		self._tuning = None
 		self._chords = None
+		self._spotify = None
 
 	def __str__(self) -> str:
 		return "[{}] {} - {} ({} week{})".format(self.id_pad, self.title, self.artist, self.weeks_on_chart, "s" if self.weeks_on_chart != 1 else "")
@@ -47,3 +49,13 @@ class Song:
 			freq = row[3]
 			self._tuning = float(freq)
 		return self._tuning
+
+	def spotify_info(self) -> Union[Any, None]:
+		spotify_file_path = os.path.join(self._ds.data_path, self.id_pad, "spotify.json")
+		if not os.path.exists(spotify_file_path):
+			raise RuntimeError("You must run the spotify-download.py script to fetch Spotify API data")
+
+		with open(spotify_file_path) as spotify_file:
+			self._spotify = json.load(spotify_file)
+
+		return self._spotify
